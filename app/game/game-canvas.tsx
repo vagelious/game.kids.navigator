@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 import { OBSTACLE_ASSETS, OBSTACLE_TYPES, type ObstacleType } from './obstacle-assets'
 
@@ -10,6 +11,7 @@ type Player = Point & { width: number; height: number; speed: number }
 type Obstacle = Point & { width: number; height: number; type: ObstacleType }
 
 export default function GameCanvas() {
+  const router = useRouter()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [gameState, setGameState] = useState<'start' | 'playing' | 'won' | 'lost'>('start')
   
@@ -80,7 +82,12 @@ export default function GameCanvas() {
       }
     })
 
-    const handleKeyDown = (e: KeyboardEvent) => { keysRef.current[e.key] = true }
+    const handleKeyDown = (e: KeyboardEvent) => { 
+        keysRef.current[e.key] = true 
+        if (e.key === 'Escape') {
+            router.push('/')
+        }
+    }
     const handleKeyUp = (e: KeyboardEvent) => { keysRef.current[e.key] = false }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -91,7 +98,7 @@ export default function GameCanvas() {
       window.removeEventListener('keyup', handleKeyUp)
       cancelAnimationFrame(animationFrameRef.current)
     }
-  }, [])
+  }, [router])
 
   // Start Game
   const startGame = () => {
@@ -241,12 +248,17 @@ export default function GameCanvas() {
         <div className="absolute z-10 text-center bg-white/90 p-12 rounded-3xl shadow-2xl max-w-lg">
           <h2 className="text-4xl font-bold text-blue-600 mb-4">Ready for {gameConfig.finishName}?</h2>
           <p className="text-xl mb-8">Use the arrow keys ⬅️ ⬆️ ⬇️ ➡️ to move!</p>
-          <button 
-            onClick={() => setGameState('playing')}
-            className="px-8 py-4 bg-green-500 text-white rounded-full text-2xl font-bold hover:bg-green-600 shadow-lg transition-transform hover:scale-110"
-          >
-            Start!
-          </button>
+          <div className="flex gap-4 justify-center flex-col">
+            <button 
+                onClick={() => setGameState('playing')}
+                className="px-8 py-4 bg-green-500 text-white rounded-full text-2xl font-bold hover:bg-green-600 shadow-lg transition-transform hover:scale-110"
+            >
+                Start!
+            </button>
+            <Link href="/" className="px-6 py-3 text-gray-500 font-bold hover:text-gray-700">
+                Exit
+            </Link>
+          </div>
         </div>
       )}
 
@@ -268,6 +280,18 @@ export default function GameCanvas() {
         </div>
       )}
 
+      {/* Exit Button Overlay for Playing State */}
+      {gameState === 'playing' && (
+        <div className="absolute top-4 right-4 z-10">
+          <Link 
+            href="/"
+            className="px-4 py-2 bg-red-500 text-white rounded-full font-bold shadow-md hover:bg-red-600 flex items-center gap-2"
+          >
+            <span>✖</span> Exit
+          </Link>
+        </div>
+      )}
+
       <canvas 
         ref={canvasRef} 
         className="block bg-green-200 touch-none"
@@ -275,4 +299,3 @@ export default function GameCanvas() {
     </>
   )
 }
-

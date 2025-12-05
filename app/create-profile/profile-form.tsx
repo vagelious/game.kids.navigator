@@ -1,10 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import { ProfileManager } from '@/utils/profile-manager'
 import { DEFAULT_KID_AVATAR } from '@/app/game/player-assets'
+
+const FRIENDLY_NAMES = [
+  'Super Star', 'Rainbow Dash', 'Captain Cool', 'Wonder Kid', 
+  'Speedy Sam', 'Magic Mike', 'Happy Hannah', 'Lucky Leo',
+  'Brave Bella', 'Sunny Sky', 'Rocket Ron', 'Dancing Daisy'
+]
 
 export default function ProfileForm() {
   const [name, setName] = useState('')
@@ -13,6 +20,12 @@ export default function ProfileForm() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    // Prefill with a random name
+    const randomName = FRIENDLY_NAMES[Math.floor(Math.random() * FRIENDLY_NAMES.length)]
+    setName(randomName)
+  }, [])
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -67,12 +80,12 @@ export default function ProfileForm() {
       }
 
       // Store player info in localStorage
-      const playerData = {
+      const profile = ProfileManager.addProfile({
         name,
-        avatarUrl: avatarUrl || DEFAULT_KID_AVATAR, 
-      }
+        avatarUrl: avatarUrl || DEFAULT_KID_AVATAR
+      })
       
-      localStorage.setItem('kids-game-player', JSON.stringify(playerData))
+      ProfileManager.setCurrentPlayer(profile)
       router.push('/game')
       
     } catch (error) {
