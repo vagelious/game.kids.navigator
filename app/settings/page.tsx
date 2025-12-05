@@ -26,7 +26,6 @@ export default function SettingsPage() {
   })
 
   useEffect(() => {
-    // Load existing settings
     const saved = localStorage.getItem('kids-game-settings')
     if (saved) {
       setSettings(JSON.parse(saved))
@@ -47,13 +46,12 @@ export default function SettingsPage() {
       setLoading(true)
       let imageUrl = ''
       
-      // Try Supabase upload first
       try {
         const fileExt = file.name.split('.').pop()
         const fileName = `settings-${type}-${Math.random()}.${fileExt}`
         
         const { error: uploadError } = await supabase.storage
-          .from('avatars') // Reusing avatars bucket for simplicity
+          .from('avatars')
           .upload(fileName, file)
 
         if (uploadError) throw uploadError
@@ -87,98 +85,107 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-purple-100 p-8">
-      <div className="max-w-2xl mx-auto bg-white p-8 rounded-3xl shadow-xl border-4 border-purple-400">
-        <h1 className="text-3xl font-bold text-purple-800 mb-8 text-center">Game Settings ⚙️</h1>
+    <main className="min-h-screen p-8 flex flex-col items-center justify-center">
+      <div className="max-w-3xl w-full bg-white p-10 rounded-[3rem] shadow-2xl border-b-8 border-slate-200">
+        <h1 className="text-4xl font-bold text-slate-700 mb-10 text-center">Game Settings ⚙️</h1>
         
-        <div className="space-y-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           {/* Start Point Section */}
-          <div className="bg-blue-50 p-6 rounded-xl border-2 border-blue-200">
-            <h2 className="text-xl font-bold text-blue-800 mb-4">📍 Start Point</h2>
-            <div className="space-y-4">
+          <div className="bg-blue-50 p-6 rounded-[2rem] border-4 border-blue-100">
+            <h2 className="text-2xl font-bold text-blue-500 mb-6 flex items-center gap-2">
+              <span>📍</span> Start Point
+            </h2>
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-bold text-blue-700 mb-1">Name</label>
+                <label className="block text-sm font-bold text-blue-400 mb-2 uppercase tracking-wide">Name</label>
                 <input
                   type="text"
                   value={settings.startName}
                   onChange={e => setSettings(s => ({ ...s, startName: e.target.value }))}
-                  className="w-full p-3 rounded-lg border-2 border-blue-200 focus:border-blue-500 outline-none text-gray-900"
+                  className="w-full p-4 rounded-xl border-2 border-blue-200 focus:border-blue-400 outline-none text-lg font-bold text-slate-700 placeholder-blue-200"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-blue-700 mb-2">Photo (Optional)</label>
+                <label className="block text-sm font-bold text-blue-400 mb-2 uppercase tracking-wide">Photo</label>
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 bg-white rounded-lg border-2 border-dashed border-blue-300 flex items-center justify-center overflow-hidden relative">
+                  <div className="w-24 h-24 bg-white rounded-2xl border-2 border-dashed border-blue-300 flex items-center justify-center overflow-hidden relative shrink-0">
                     {settings.startImage ? (
                       <Image src={settings.startImage} alt="Start" fill className="object-cover" />
                     ) : (
-                      <span className="text-2xl">🏠</span>
+                      <span className="text-4xl">🏠</span>
                     )}
                   </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'start')}
-                    disabled={loading}
-                    className="text-sm text-blue-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
-                  />
+                  <label className="btn-bouncy px-4 py-2 bg-blue-500 text-white rounded-xl font-bold text-sm cursor-pointer hover:bg-blue-600">
+                    Change
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'start')}
+                      disabled={loading}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Finish Point Section */}
-          <div className="bg-yellow-50 p-6 rounded-xl border-2 border-yellow-200">
-            <h2 className="text-xl font-bold text-yellow-800 mb-4">🏁 Finish Point</h2>
-            <div className="space-y-4">
+          <div className="bg-yellow-50 p-6 rounded-[2rem] border-4 border-yellow-100">
+            <h2 className="text-2xl font-bold text-yellow-500 mb-6 flex items-center gap-2">
+              <span>🏁</span> Finish Point
+            </h2>
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-bold text-yellow-700 mb-1">Name</label>
+                <label className="block text-sm font-bold text-yellow-400 mb-2 uppercase tracking-wide">Name</label>
                 <input
                   type="text"
                   value={settings.finishName}
                   onChange={e => setSettings(s => ({ ...s, finishName: e.target.value }))}
-                  className="w-full p-3 rounded-lg border-2 border-yellow-200 focus:border-yellow-500 outline-none text-gray-900"
+                  className="w-full p-4 rounded-xl border-2 border-yellow-200 focus:border-yellow-400 outline-none text-lg font-bold text-slate-700 placeholder-yellow-200"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-yellow-700 mb-2">Photo (Optional)</label>
+                <label className="block text-sm font-bold text-yellow-400 mb-2 uppercase tracking-wide">Photo</label>
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 bg-white rounded-lg border-2 border-dashed border-yellow-300 flex items-center justify-center overflow-hidden relative">
+                  <div className="w-24 h-24 bg-white rounded-2xl border-2 border-dashed border-yellow-300 flex items-center justify-center overflow-hidden relative shrink-0">
                     {settings.finishImage ? (
                       <Image src={settings.finishImage} alt="Finish" fill className="object-cover" />
                     ) : (
-                      <span className="text-2xl">🏫</span>
+                      <span className="text-4xl">🏫</span>
                     )}
                   </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'finish')}
-                    disabled={loading}
-                    className="text-sm text-yellow-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-yellow-100 file:text-yellow-700 hover:file:bg-yellow-200"
-                  />
+                  <label className="btn-bouncy px-4 py-2 bg-yellow-400 text-yellow-900 rounded-xl font-bold text-sm cursor-pointer hover:bg-yellow-500">
+                    Change
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'finish')}
+                      disabled={loading}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="flex gap-4 pt-4">
-            <Link href="/" className="flex-1 py-4 bg-gray-400 text-white text-center rounded-xl font-bold text-lg hover:bg-gray-500">
-              Cancel
-            </Link>
-            <button
-              onClick={handleSave}
-              disabled={loading}
-              className="flex-1 py-4 bg-purple-600 text-white rounded-xl font-bold text-lg hover:bg-purple-700 shadow-lg disabled:opacity-50"
-            >
-              Save Settings
-            </button>
-          </div>
+        <div className="flex gap-4">
+          <Link href="/" className="btn-bouncy flex-1 py-4 bg-slate-200 text-slate-500 text-center rounded-2xl font-bold text-xl hover:bg-slate-300">
+            Cancel
+          </Link>
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="btn-3d flex-1 py-4 bg-violet-500 text-white rounded-2xl font-bold text-xl hover:bg-violet-600 border-b-8 border-violet-700 active:border-b-0 active:translate-y-2 disabled:opacity-50"
+          >
+            Save Settings
+          </button>
         </div>
       </div>
     </main>
   )
 }
-

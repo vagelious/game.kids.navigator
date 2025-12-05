@@ -28,21 +28,23 @@ export default function ProfilesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-green-200 p-8 flex flex-col items-center">
-      <h1 className="text-4xl font-bold text-green-800 mb-8 drop-shadow-sm">
-        Who is playing?
-      </h1>
+    <main className="min-h-screen p-8 flex flex-col items-center justify-center">
+      <div className="bg-white/60 backdrop-blur-md p-8 rounded-[3rem] shadow-xl mb-12">
+        <h1 className="text-5xl font-bold text-sky-600 text-center">
+          Who is playing? 🤔
+        </h1>
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-4xl w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-5xl w-full px-4">
         {/* New Profile Button */}
         <Link 
           href="/create-profile"
-          className="bg-white/50 border-4 border-dashed border-green-400 rounded-3xl p-6 flex flex-col items-center justify-center gap-4 hover:bg-white/80 transition-colors cursor-pointer min-h-[250px]"
+          className="btn-bouncy bg-white/50 border-4 border-dashed border-sky-300 rounded-[2rem] p-6 flex flex-col items-center justify-center gap-4 hover:bg-white hover:border-sky-400 transition-all cursor-pointer min-h-[280px] group"
         >
-          <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center text-4xl text-green-600">
+          <div className="w-24 h-24 bg-sky-100 rounded-full flex items-center justify-center text-5xl text-sky-500 group-hover:scale-110 transition-transform">
             ➕
           </div>
-          <span className="text-2xl font-bold text-green-800">New Player</span>
+          <span className="text-2xl font-bold text-sky-700">New Player</span>
         </Link>
 
         {/* Existing Profiles */}
@@ -50,9 +52,9 @@ export default function ProfilesPage() {
           <div 
             key={profile.id}
             onClick={() => handleSelectProfile(profile)}
-            className="bg-white rounded-3xl p-6 flex flex-col items-center justify-center gap-4 shadow-lg hover:scale-105 transition-transform cursor-pointer relative min-h-[250px] border-4 border-transparent hover:border-green-400 group"
+            className="btn-3d bg-white rounded-[2rem] p-6 flex flex-col items-center justify-center gap-4 border-b-8 border-slate-200 hover:border-sky-400 cursor-pointer relative min-h-[280px] group transition-all hover:-translate-y-2"
           >
-            <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-green-100 shadow-inner">
+            <div className="relative w-36 h-36 rounded-full overflow-hidden border-4 border-sky-100 shadow-lg group-hover:scale-105 transition-transform">
               <Image 
                 src={profile.avatarUrl} 
                 alt={profile.name} 
@@ -60,12 +62,12 @@ export default function ProfilesPage() {
                 className="object-cover"
               />
             </div>
-            <span className="text-2xl font-bold text-gray-800">{profile.name}</span>
+            <span className="text-3xl font-bold text-slate-700">{profile.name}</span>
             
             {/* Delete Button */}
             <button
               onClick={(e) => handleDeleteProfile(e, profile.id)}
-              className="absolute top-4 right-4 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-2"
+              className="absolute top-4 right-4 bg-rose-100 text-rose-500 rounded-full w-10 h-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-500 hover:text-white shadow-sm"
               title="Delete Profile"
             >
               🗑️
@@ -74,15 +76,14 @@ export default function ProfilesPage() {
         ))}
       </div>
 
-      <div className="mt-12">
+      <div className="mt-16">
         <Link 
             href="/"
-            className="px-8 py-3 bg-gray-500 text-white rounded-full font-bold hover:bg-gray-600 transition-colors"
+            className="btn-bouncy px-10 py-4 bg-slate-200 text-slate-600 rounded-full font-bold text-xl hover:bg-slate-300 transition-colors shadow-md"
         >
-            Back Home
+            ⬅️ Back Home
         </Link>
       </div>
     </main>
   )
 }
-

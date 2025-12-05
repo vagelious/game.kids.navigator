@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f0f9ff; /* sky-50 */
+  --foreground: #0f172a; /* slate-900 */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-fredoka);
 }
 
 body {
-  background: var(--background);
+  background-color: #f0f9ff;
+  background-image: 
+      radial-gradient(#bae6fd 20%, transparent 20%),
+      radial-gradient(#bae6fd 20%, transparent 20%);
+  background-position: 0 0, 50px 50px;
+  background-size: 100px 100px;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Global "Bouncy" Click Animation for Buttons */
+.btn-bouncy {
+  transition: transform 0.1s ease-in-out;
+}
+.btn-bouncy:active {
+  transform: scale(0.95);
+}
+
+/* 3D Button Effect */
+.btn-3d {
+  transition: all 0.1s;
+  transform: translateY(0);
+}
+.btn-3d:active {
+  transform: translateY(4px);
+  box-shadow: 0 0px 0 0;
 }

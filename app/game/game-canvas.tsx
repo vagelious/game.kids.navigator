@@ -17,10 +17,12 @@ export default function GameCanvas() {
   
   // Game constants
   const PLAYER_SIZE = 60
-  const OBSTACLE_COUNT = 5
+  const OBSTACLE_COUNT = 15
+  const WORLD_WIDTH = 3000 // Much wider world for scrolling!
   
   // State refs for game loop to access latest values without re-renders
   const playerRef = useRef<Player>({ x: 50, y: 300, width: PLAYER_SIZE, height: PLAYER_SIZE, speed: 5 })
+  const cameraRef = useRef<{ x: number }>({ x: 0 })
   const keysRef = useRef<{ [key: string]: boolean }>({})
   const obstaclesRef = useRef<Obstacle[]>([])
   const playerImageRef = useRef<HTMLImageElement | null>(null)
@@ -113,7 +115,7 @@ export default function GameCanvas() {
     for (let i = 0; i < OBSTACLE_COUNT; i++) {
       const type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)]
       obstacles.push({
-        x: 200 + Math.random() * (canvas.width - 400), // Keep away from start/end
+        x: 400 + Math.random() * (WORLD_WIDTH - 800), // Spread across the whole world
         y: Math.random() * (canvas.height - 100),
         width: 60,
         height: 60,
@@ -122,6 +124,9 @@ export default function GameCanvas() {
     }
     obstaclesRef.current = obstacles
     
+    // Reset Camera
+    cameraRef.current = { x: 0 }
+
     setGameState('playing')
     gameLoop()
   }
@@ -135,22 +140,33 @@ export default function GameCanvas() {
     // Update Logic
     const player = playerRef.current
     const keys = keysRef.current
+    const camera = cameraRef.current
 
     if (keys['ArrowUp']) player.y -= player.speed
     if (keys['ArrowDown']) player.y += player.speed
     if (keys['ArrowLeft']) player.x -= player.speed
     if (keys['ArrowRight']) player.x += player.speed
 
-    // Boundaries
+    // Boundaries (World Coordinates)
     if (player.x < 0) player.x = 0
     if (player.y < 0) player.y = 0
     if (player.y + player.height > canvas.height) player.y = canvas.height - player.height
     
-    // Win Condition (Reached right side)
-    if (player.x + player.width > canvas.width - 50) {
+    // Win Condition (Reached end of world)
+    if (player.x + player.width > WORLD_WIDTH - 100) {
       setGameState('won')
       return
     }
+
+    // Update Camera
+    // Camera follows player but stops at world bounds
+    // Center the player on screen roughly
+    let targetCamX = player.x - canvas.width / 3
+    if (targetCamX < 0) targetCamX = 0
+    if (targetCamX > WORLD_WIDTH - canvas.width) targetCamX = WORLD_WIDTH - canvas.width
+    
+    // Smooth camera movement (lerp)
+    camera.x += (targetCamX - camera.x) * 0.1
 
     // Collision Detection
     for (const obs of obstaclesRef.current) {
@@ -160,39 +176,42 @@ export default function GameCanvas() {
         player.y < obs.y + obs.height &&
         player.y + player.height > obs.y
       ) {
-        // Collision! Reset to start for now (or game over)
-        // Let's just push them back to start for "kids mode" (no hard fail)
+        // Collision! Reset to start
         player.x = 50
         player.y = canvas.height / 2
-        // Or setGameState('lost') if we want to be strict
+        camera.x = 0 // Reset camera too
       }
     }
 
     // Render
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    
+    // Save context to apply camera transform
+    ctx.save()
+    ctx.translate(-camera.x, 0) // Move everything left by camera position
 
-    // Draw Background (Grass)
+    // Draw Background (Grass) - Draw big rectangle for whole world
     ctx.fillStyle = '#86efac' // green-300
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillRect(0, 0, WORLD_WIDTH, canvas.height)
 
     // Draw Start Zone
     ctx.fillStyle = '#60a5fa' // blue-400
-    ctx.fillRect(0, 0, 100, canvas.height)
+    ctx.fillRect(0, 0, 200, canvas.height)
     if (startImageRef.current) {
-        ctx.drawImage(startImageRef.current, 10, 80, 80, 80)
+        ctx.drawImage(startImageRef.current, 20, 80, 160, 160)
     }
     ctx.fillStyle = '#fff'
-    ctx.font = '20px sans-serif'
-    ctx.fillText(gameConfig.startName.toUpperCase(), 10, 50)
+    ctx.font = 'bold 30px sans-serif'
+    ctx.fillText(gameConfig.startName.toUpperCase(), 20, 60)
 
     // Draw End Zone
     ctx.fillStyle = '#facc15' // yellow-400
-    ctx.fillRect(canvas.width - 100, 0, 100, canvas.height)
+    ctx.fillRect(WORLD_WIDTH - 200, 0, 200, canvas.height)
     if (finishImageRef.current) {
-        ctx.drawImage(finishImageRef.current, canvas.width - 90, 80, 80, 80)
+        ctx.drawImage(finishImageRef.current, WORLD_WIDTH - 180, 80, 160, 160)
     }
     ctx.fillStyle = '#fff'
-    ctx.fillText(gameConfig.finishName.toUpperCase(), canvas.width - 95, 50)
+    ctx.fillText(gameConfig.finishName.toUpperCase(), WORLD_WIDTH - 190, 60)
 
     // Draw Obstacles
     for (const obs of obstaclesRef.current) {
@@ -200,7 +219,7 @@ export default function GameCanvas() {
       if (img) {
         ctx.drawImage(img, obs.x, obs.y, obs.width, obs.height)
       } else {
-        // Fallback if image not loaded
+        // Fallback
         ctx.fillStyle = '#ef4444'
         ctx.fillRect(obs.x, obs.y, obs.width, obs.height)
       }
@@ -227,6 +246,9 @@ export default function GameCanvas() {
     ctx.beginPath()
     ctx.arc(player.x + player.width/2, player.y + player.height/2, player.width/2, 0, Math.PI * 2)
     ctx.stroke()
+
+    // Restore context (undo camera translate for fixed UI elements if we had any inside canvas)
+    ctx.restore() 
 
     animationFrameRef.current = requestAnimationFrame(gameLoop)
   }
@@ -282,7 +304,7 @@ export default function GameCanvas() {
 
       {/* Exit Button Overlay for Playing State */}
       {gameState === 'playing' && (
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute bottom-4 left-4 z-10">
           <Link 
             href="/"
             className="px-4 py-2 bg-red-500 text-white rounded-full font-bold shadow-md hover:bg-red-600 flex items-center gap-2"

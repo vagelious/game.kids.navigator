@@ -22,7 +22,6 @@ export default function ProfileForm() {
   const supabase = createClient()
 
   useEffect(() => {
-    // Prefill with a random name
     const randomName = FRIENDLY_NAMES[Math.floor(Math.random() * FRIENDLY_NAMES.length)]
     setName(randomName)
   }, [])
@@ -56,7 +55,6 @@ export default function ProfileForm() {
 
       if (file) {
         try {
-          // Try Supabase upload first
           const fileExt = file.name.split('.').pop()
           const fileName = `${Math.random()}.${fileExt}`
           const filePath = `${fileName}`
@@ -74,12 +72,10 @@ export default function ProfileForm() {
           avatarUrl = publicUrl
         } catch (uploadErr) {
           console.warn('Supabase upload failed, falling back to local storage:', uploadErr)
-          // Fallback to Base64 if upload fails (e.g. RLS permissions)
           avatarUrl = await fileToBase64(file)
         }
       }
 
-      // Store player info in localStorage
       const profile = ProfileManager.addProfile({
         name,
         avatarUrl: avatarUrl || DEFAULT_KID_AVATAR
@@ -97,9 +93,9 @@ export default function ProfileForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-8">
       <div>
-        <label htmlFor="name" className="block text-lg font-medium text-gray-700 mb-2">
+        <label htmlFor="name" className="block text-2xl font-bold text-slate-700 mb-3">
           What is your name?
         </label>
         <input
@@ -107,18 +103,18 @@ export default function ProfileForm() {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-green-500 focus:ring-green-500 text-lg text-gray-900"
+          className="w-full px-6 py-4 rounded-2xl border-4 border-sky-200 focus:border-sky-400 outline-none text-2xl text-slate-700 placeholder-slate-300 transition-colors"
           placeholder="Type your name..."
           required
         />
       </div>
 
       <div>
-        <label className="block text-lg font-medium text-gray-700 mb-2">
+        <label className="block text-2xl font-bold text-slate-700 mb-3">
           Pick your photo!
         </label>
-        <div className="flex items-center gap-4">
-          <div className="relative w-24 h-24 bg-gray-100 rounded-full overflow-hidden border-2 border-dashed border-gray-400 flex items-center justify-center">
+        <div className="flex items-center gap-6 p-6 bg-sky-50 rounded-[2rem] border-2 border-sky-100">
+          <div className="relative w-28 h-28 bg-white rounded-full overflow-hidden border-4 border-sky-200 flex items-center justify-center shadow-sm shrink-0">
             {previewUrl ? (
               <Image 
                 src={previewUrl} 
@@ -127,31 +123,32 @@ export default function ProfileForm() {
                 className="object-cover"
               />
             ) : (
-              <span className="text-2xl text-gray-400">📷</span>
+              <span className="text-4xl text-sky-200">📷</span>
             )}
           </div>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="block w-full text-sm text-gray-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded-full file:border-0
-              file:text-sm file:font-semibold
-              file:bg-green-50 file:text-green-700
-              hover:file:bg-green-100"
-          />
+          <div className="flex-1">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="block w-full text-sm text-slate-500
+                file:mr-4 file:py-3 file:px-6
+                file:rounded-full file:border-0
+                file:text-lg file:font-bold
+                file:bg-sky-500 file:text-white
+                hover:file:bg-sky-600 cursor-pointer transition-colors"
+            />
+          </div>
         </div>
       </div>
 
       <button
         type="submit"
         disabled={loading || !name}
-        className="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-xl font-bold text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+        className="btn-3d w-full py-5 px-6 rounded-2xl text-2xl font-bold text-white bg-emerald-500 border-b-8 border-emerald-700 hover:brightness-110 active:border-b-0 active:translate-y-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
       >
-        {loading ? 'Creating...' : 'Let\'s Play!'}
+        {loading ? 'Creating...' : 'Let\'s Play! 🚀'}
       </button>
     </form>
   )
 }
-
