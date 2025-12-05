@@ -38,7 +38,8 @@ export default function GameCanvas() {
     startName: 'Home',
     startImage: null as string | null,
     finishName: 'School',
-    finishImage: null as string | null
+    finishImage: null as string | null,
+    difficulty: 'medium' as 'easy' | 'medium' | 'hard'
   })
 
   const startImageRef = useRef<HTMLImageElement | null>(null)
@@ -110,15 +111,23 @@ export default function GameCanvas() {
     // Reset player
     playerRef.current = { x: 50, y: canvas.height / 2, width: PLAYER_SIZE, height: PLAYER_SIZE, speed: 4 }
     
+    // Determine obstacle count based on difficulty
+    let obstacleCount = 15 // Default/Medium
+    if (gameConfig.difficulty === 'easy') obstacleCount = 8
+    if (gameConfig.difficulty === 'hard') obstacleCount = 30
+
     // Generate obstacles
     const obstacles: Obstacle[] = []
-    for (let i = 0; i < OBSTACLE_COUNT; i++) {
+    for (let i = 0; i < obstacleCount; i++) {
       const type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)]
+      // Vary sizes slightly
+      const size = 50 + Math.random() * 40 // 50 to 90px
+      
       obstacles.push({
         x: 400 + Math.random() * (WORLD_WIDTH - 800), // Spread across the whole world
         y: Math.random() * (canvas.height - 100),
-        width: 60,
-        height: 60,
+        width: size,
+        height: size,
         type
       })
     }

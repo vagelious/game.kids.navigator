@@ -11,6 +11,7 @@ export type GameSettings = {
   startImage: string | null
   finishName: string
   finishImage: string | null
+  difficulty: 'easy' | 'medium' | 'hard'
 }
 
 export default function SettingsPage() {
@@ -22,7 +23,8 @@ export default function SettingsPage() {
     startName: 'Home',
     startImage: null,
     finishName: 'School',
-    finishImage: null
+    finishImage: null,
+    difficulty: 'medium'
   })
 
   useEffect(() => {
@@ -90,6 +92,31 @@ export default function SettingsPage() {
         <h1 className="text-4xl font-bold text-slate-700 mb-10 text-center">Game Settings ⚙️</h1>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+          {/* Difficulty Section */}
+          <div className="md:col-span-2 bg-emerald-50 p-6 rounded-[2rem] border-4 border-emerald-100">
+            <h2 className="text-2xl font-bold text-emerald-600 mb-6 flex items-center gap-2">
+              <span>⚡</span> Difficulty Level
+            </h2>
+            <div className="flex gap-4">
+              {(['easy', 'medium', 'hard'] as const).map((level) => (
+                <button
+                  key={level}
+                  onClick={() => setSettings(s => ({ ...s, difficulty: level }))}
+                  className={`flex-1 py-4 rounded-xl font-bold text-lg capitalize transition-all border-b-4 active:border-b-0 active:translate-y-1
+                    ${settings.difficulty === level 
+                      ? level === 'easy' ? 'bg-green-400 text-white border-green-600' :
+                        level === 'medium' ? 'bg-yellow-400 text-yellow-900 border-yellow-600' :
+                        'bg-red-400 text-white border-red-600'
+                      : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'
+                    }
+                  `}
+                >
+                  {level}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Start Point Section */}
           <div className="bg-blue-50 p-6 rounded-[2rem] border-4 border-blue-100">
             <h2 className="text-2xl font-bold text-blue-500 mb-6 flex items-center gap-2">

@@ -2,7 +2,7 @@
 
 const svgToDataUrl = (svg: string) => `data:image/svg+xml;base64,${btoa(svg)}`
 
-export const OBSTACLE_TYPES = ['banana', 'rock', 'puddle', 'cone'] as const
+export const OBSTACLE_TYPES = ['banana', 'rock', 'puddle', 'cone', 'log', 'cactus'] as const
 export type ObstacleType = typeof OBSTACLE_TYPES[number]
 
 const bananaSvg = `
@@ -34,10 +34,26 @@ const coneSvg = `
   <path d="M39,50 L61,50 L59,40 L41,40 Z" fill="white"/>
 </svg>`
 
+const logSvg = `
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="40" width="80" height="30" rx="15" fill="#78350F" stroke="#451A03" stroke-width="3"/>
+  <ellipse cx="20" cy="55" rx="5" ry="10" fill="#92400E"/>
+  <path d="M30,40 L30,70 M50,40 L50,70 M70,40 L70,70" stroke="#451A03" stroke-width="2" opacity="0.5"/>
+</svg>`
+
+const cactusSvg = `
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M40,90 L40,30 Q40,10 50,10 Q60,10 60,30 L60,90" fill="#22C55E" stroke="#14532D" stroke-width="3"/>
+  <path d="M40,60 Q20,60 20,50 Q20,40 40,50" fill="#22C55E" stroke="#14532D" stroke-width="3"/>
+  <path d="M60,50 Q80,50 80,40 Q80,30 60,40" fill="#22C55E" stroke="#14532D" stroke-width="3"/>
+  <path d="M45,30 L45,35 M55,20 L55,25 M40,70 L45,70" stroke="#14532D" stroke-width="2"/>
+</svg>`
+
 export const OBSTACLE_ASSETS: Record<ObstacleType, string> = {
   banana: svgToDataUrl(bananaSvg),
   rock: svgToDataUrl(rockSvg),
   puddle: svgToDataUrl(puddleSvg),
   cone: svgToDataUrl(coneSvg),
+  log: svgToDataUrl(logSvg),
+  cactus: svgToDataUrl(cactusSvg),
 }
-
