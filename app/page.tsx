@@ -41,12 +41,20 @@ export default function Home() {
           </Link>
         )}
 
-        <Link 
-          href="/settings"
-          className="btn-bouncy px-8 py-3 bg-white text-slate-400 rounded-full font-bold hover:bg-slate-50 hover:text-slate-600 transition-colors shadow-sm border-2 border-slate-100"
-        >
-          ⚙️ Settings
-        </Link>
+        <div className="flex gap-4 w-full">
+          <Link 
+            href="/settings"
+            className="btn-bouncy flex-1 px-4 py-3 bg-white text-slate-400 rounded-full font-bold hover:bg-slate-50 hover:text-slate-600 transition-colors shadow-sm border-2 border-slate-100 text-center"
+          >
+            ⚙️ Settings
+          </Link>
+          <Link 
+            href="/leaderboard"
+            className="btn-bouncy flex-1 px-4 py-3 bg-white text-amber-500 rounded-full font-bold hover:bg-yellow-50 hover:text-amber-600 transition-colors shadow-sm border-2 border-slate-100 text-center"
+          >
+            🏆 Scores
+          </Link>
+        </div>
       </div>
     </main>
   );

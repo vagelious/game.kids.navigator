@@ -10,6 +10,8 @@ type Point = { x: number; y: number }
 type Player = Point & { width: number; height: number; speed: number }
 type Obstacle = Point & { width: number; height: number; type: ObstacleType; vx?: number; vy?: number }
 
+import { LeaderboardManager } from '@/utils/leaderboard-manager'
+
 export default function GameCanvas() {
   const router = useRouter()
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -19,6 +21,10 @@ export default function GameCanvas() {
   const PLAYER_SIZE = 60
   const OBSTACLE_COUNT = 15
   const WORLD_WIDTH = 3000 // Much wider world for scrolling!
+  const HEADER_HEIGHT = 100 // Height of the top HUD/Header
+  const FOOTER_HEIGHT = 20  // Small padding at bottom
+  const SAFE_ZONE_TOP = HEADER_HEIGHT + 20
+  const SAFE_ZONE_BOTTOM = FOOTER_HEIGHT + 20
   
   const [score, setScore] = useState(0)
   const [timeElapsed, setTimeElapsed] = useState(0)
@@ -143,9 +149,13 @@ export default function GameCanvas() {
         vy = (Math.random() - 0.5) * 2 // Vertical speed
       }
 
+      // Calculate safe Y range
+      const minY = SAFE_ZONE_TOP
+      const maxY = canvas.height - SAFE_ZONE_BOTTOM - size
+
       obstacles.push({
         x: 400 + Math.random() * (WORLD_WIDTH - 800), // Spread across the whole world
-        y: Math.random() * (canvas.height - size), // Cover full height
+        y: minY + Math.random() * (maxY - minY), // Within safe vertical bounds
         width: size,
         height: size,
         type,
@@ -220,12 +230,23 @@ export default function GameCanvas() {
     // Boundaries (World Coordinates)
     if (player.x < 0) player.x = 0
     if (player.x + player.width > WORLD_WIDTH) player.x = WORLD_WIDTH - player.width
-    if (player.y < 0) player.y = 0
-    if (player.y + player.height > canvas.height) player.y = canvas.height - player.height
+    
+    // Vertical Boundaries (Respect Safe Zones)
+    if (player.y < SAFE_ZONE_TOP) player.y = SAFE_ZONE_TOP
+    if (player.y + player.height > canvas.height - SAFE_ZONE_BOTTOM) player.y = canvas.height - SAFE_ZONE_BOTTOM - player.height
     
     // Win Condition (Reached end of world)
     if (player.x + player.width > WORLD_WIDTH - 100) {
       setGameState('won')
+      
+      // Save High Score
+      LeaderboardManager.addScore({
+        playerName: playerName || 'Player',
+        score: scoreRef.current,
+        difficulty: gameConfig.difficulty,
+        time: timeRef.current
+      })
+      
       return
     }
 
@@ -279,9 +300,12 @@ export default function GameCanvas() {
           obs.x += obs.vx || 0
           obs.y += obs.vy || 0
           
-          // Bounce off walls
-          if (obs.y < 0 || obs.y + obs.height > canvas.height) {
+          // Bounce off walls (Respect Safe Zones)
+          if (obs.y < SAFE_ZONE_TOP || obs.y + obs.height > canvas.height - SAFE_ZONE_BOTTOM) {
             obs.vy = -(obs.vy || 0)
+            // Clamp position to prevent sticking
+            if (obs.y < SAFE_ZONE_TOP) obs.y = SAFE_ZONE_TOP
+            if (obs.y + obs.height > canvas.height - SAFE_ZONE_BOTTOM) obs.y = canvas.height - SAFE_ZONE_BOTTOM - obs.height
           }
           // Bounce off horizontal limits (local area patrol)
           // We can't easily check "local area" without storing initial pos, 
@@ -440,6 +464,9 @@ export default function GameCanvas() {
             >
                 Play Again
             </button>
+            <Link href="/leaderboard" className="px-6 py-3 bg-amber-500 text-white rounded-xl font-bold">
+                🏆 Leaderboard
+            </Link>
             <Link href="/" className="px-6 py-3 bg-gray-500 text-white rounded-xl font-bold">
                 Back Home
             </Link>
