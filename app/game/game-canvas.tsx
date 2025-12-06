@@ -47,7 +47,9 @@ export default function GameCanvas() {
     banana: null,
     rock: null,
     puddle: null,
-    cone: null
+    cone: null,
+    log: null,
+    cactus: null
   })
   const animationFrameRef = useRef<number>(0)
 
