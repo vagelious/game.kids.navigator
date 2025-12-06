@@ -8,7 +8,7 @@ import { OBSTACLE_ASSETS, OBSTACLE_TYPES, type ObstacleType } from './obstacle-a
 
 type Point = { x: number; y: number }
 type Player = Point & { width: number; height: number; speed: number }
-type Obstacle = Point & { width: number; height: number; type: ObstacleType }
+type Obstacle = Point & { width: number; height: number; type: ObstacleType; vx?: number; vy?: number }
 
 export default function GameCanvas() {
   const router = useRouter()
@@ -20,9 +20,20 @@ export default function GameCanvas() {
   const OBSTACLE_COUNT = 15
   const WORLD_WIDTH = 3000 // Much wider world for scrolling!
   
-  // State refs for game loop to access latest values without re-renders
+  const [score, setScore] = useState(0)
+  const [timeElapsed, setTimeElapsed] = useState(0)
+  const [playerName, setPlayerName] = useState('')
+  const [isPaused, setIsPaused] = useState(false)
+
+  // Refs for mutable game state
   const playerRef = useRef<Player>({ x: 50, y: 300, width: PLAYER_SIZE, height: PLAYER_SIZE, speed: 5 })
+  const scoreRef = useRef(0)
+  const timeRef = useRef(0)
+  const startTimeRef = useRef(0)
+  const lastTimeRef = useRef(0)
   const cameraRef = useRef<{ x: number }>({ x: 0 })
+  const shakeRef = useRef<number>(0)
+  const hitDataRef = useRef<{ x: number; y: number; active: boolean; timer: number }>({ x: 0, y: 0, active: false, timer: 0 })
   const keysRef = useRef<{ [key: string]: boolean }>({})
   const obstaclesRef = useRef<Obstacle[]>([])
   const playerImageRef = useRef<HTMLImageElement | null>(null)
@@ -47,10 +58,11 @@ export default function GameCanvas() {
 
   // Initialize game
   useEffect(() => {
-    // Load player image
+    // Load player image and name
     const storedData = localStorage.getItem('kids-game-player')
     if (storedData) {
-      const { avatarUrl } = JSON.parse(storedData)
+      const { name, avatarUrl } = JSON.parse(storedData)
+      setPlayerName(name)
       const img = new Image()
       img.src = avatarUrl
       img.onload = () => {
@@ -123,25 +135,55 @@ export default function GameCanvas() {
       // Vary sizes slightly
       const size = 50 + Math.random() * 40 // 50 to 90px
       
+      // Moving obstacles for Hard Mode
+      let vx = 0
+      let vy = 0
+      if (gameConfig.difficulty === 'hard' && Math.random() > 0.5) {
+        vx = (Math.random() - 0.5) * 2 // Horizontal speed
+        vy = (Math.random() - 0.5) * 2 // Vertical speed
+      }
+
       obstacles.push({
         x: 400 + Math.random() * (WORLD_WIDTH - 800), // Spread across the whole world
-        y: Math.random() * (canvas.height - 100),
+        y: Math.random() * (canvas.height - size), // Cover full height
         width: size,
         height: size,
-        type
+        type,
+        vx,
+        vy
       })
     }
     obstaclesRef.current = obstacles
     
-    // Reset Camera
-    cameraRef.current = { x: 0 }
+    // Reset Score and Time
+    scoreRef.current = 0
+    timeRef.current = 0
+    startTimeRef.current = Date.now()
+    lastTimeRef.current = Date.now()
+    setScore(0)
+    setTimeElapsed(0)
+    setIsPaused(false)
 
     setGameState('playing')
     gameLoop()
   }
 
+  const togglePause = () => {
+    setIsPaused(!isPaused)
+    if (!isPaused) {
+      // Pausing
+      cancelAnimationFrame(animationFrameRef.current)
+    } else {
+      // Resuming
+      lastTimeRef.current = Date.now()
+      gameLoop()
+    }
+  }
+
   const gameLoop = () => {
     if (!canvasRef.current) return
+    if (isPaused) return
+
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
@@ -150,14 +192,34 @@ export default function GameCanvas() {
     const player = playerRef.current
     const keys = keysRef.current
     const camera = cameraRef.current
+    const hitData = hitDataRef.current
 
-    if (keys['ArrowUp']) player.y -= player.speed
-    if (keys['ArrowDown']) player.y += player.speed
-    if (keys['ArrowLeft']) player.x -= player.speed
-    if (keys['ArrowRight']) player.x += player.speed
+    let isMoving = false
+
+    if (hitData.active) {
+      hitData.timer--
+      
+      // Shake effect
+      shakeRef.current = hitData.timer > 0 ? Math.sin(hitData.timer) * 10 : 0
+
+      if (hitData.timer <= 0) {
+        // Reset after hit
+        player.x = 50
+        player.y = canvas.height / 2
+        camera.x = 0
+        shakeRef.current = 0
+        hitData.active = false
+      }
+    } else {
+      if (keys['ArrowUp']) { player.y -= player.speed; isMoving = true }
+      if (keys['ArrowDown']) { player.y += player.speed; isMoving = true }
+      if (keys['ArrowLeft']) { player.x -= player.speed; isMoving = true }
+      if (keys['ArrowRight']) { player.x += player.speed; isMoving = true }
+    }
 
     // Boundaries (World Coordinates)
     if (player.x < 0) player.x = 0
+    if (player.x + player.width > WORLD_WIDTH) player.x = WORLD_WIDTH - player.width
     if (player.y < 0) player.y = 0
     if (player.y + player.height > canvas.height) player.y = canvas.height - player.height
     
@@ -167,28 +229,81 @@ export default function GameCanvas() {
       return
     }
 
-    // Update Camera
-    // Camera follows player but stops at world bounds
-    // Center the player on screen roughly
-    let targetCamX = player.x - canvas.width / 3
-    if (targetCamX < 0) targetCamX = 0
-    if (targetCamX > WORLD_WIDTH - canvas.width) targetCamX = WORLD_WIDTH - canvas.width
+    // Time update
+    const now = Date.now()
+    const dt = (now - lastTimeRef.current) / 1000
+    lastTimeRef.current = now
     
-    // Smooth camera movement (lerp)
-    camera.x += (targetCamX - camera.x) * 0.1
+    if (!hitDataRef.current.active && isMoving) {
+      timeRef.current += dt
+      
+      // Distance Score: Max 5000 points for full distance
+      // Calculate progress based on WORLD_WIDTH
+      const progress = Math.min(playerRef.current.x / (WORLD_WIDTH - 100), 1)
+      const distanceScore = Math.floor(progress * 5000)
+      
+      // Time Bonus: 10 points per second survived
+      const timeScore = Math.floor(timeRef.current * 10)
+      
+      scoreRef.current = distanceScore + timeScore
+      
+      // Update UI more frequently for smoothness (every 100ms approx)
+      if (now % 10 < 2) {
+        setScore(scoreRef.current)
+      }
+      
+      if (Math.floor(timeRef.current) > timeElapsed) {
+        setTimeElapsed(Math.floor(timeRef.current))
+      }
+    }
 
-    // Collision Detection
-    for (const obs of obstaclesRef.current) {
-      if (
-        player.x < obs.x + obs.width &&
-        player.x + player.width > obs.x &&
-        player.y < obs.y + obs.height &&
-        player.y + player.height > obs.y
-      ) {
-        // Collision! Reset to start
-        player.x = 50
-        player.y = canvas.height / 2
-        camera.x = 0 // Reset camera too
+    // Update Camera
+    if (!hitData.active) {
+      // Camera follows player but stops at world bounds
+      // Center the player on screen roughly
+      let targetCamX = player.x - canvas.width / 3
+      const maxCamX = Math.max(0, WORLD_WIDTH - canvas.width)
+      
+      if (targetCamX < 0) targetCamX = 0
+      if (targetCamX > maxCamX) targetCamX = maxCamX
+      
+      // Smooth camera movement (lerp)
+      camera.x += (targetCamX - camera.x) * 0.1
+    }
+
+    // Collision Detection & Obstacle Movement
+    if (!hitData.active) {
+      for (const obs of obstaclesRef.current) {
+        // Move obstacles
+        if (obs.vx || obs.vy) {
+          obs.x += obs.vx || 0
+          obs.y += obs.vy || 0
+          
+          // Bounce off walls
+          if (obs.y < 0 || obs.y + obs.height > canvas.height) {
+            obs.vy = -(obs.vy || 0)
+          }
+          // Bounce off horizontal limits (local area patrol)
+          // We can't easily check "local area" without storing initial pos, 
+          // so let's just clamp to world bounds for now or let them roam
+          if (obs.x < 0 || obs.x + obs.width > WORLD_WIDTH) {
+            obs.vx = -(obs.vx || 0)
+          }
+        }
+
+        if (
+          player.x < obs.x + obs.width &&
+          player.x + player.width > obs.x &&
+          player.y < obs.y + obs.height &&
+          player.y + player.height > obs.y
+        ) {
+          // Collision Trigger
+          hitData.active = true
+          hitData.timer = 45 // 0.75 seconds pause
+          hitData.x = player.x
+          hitData.y = player.y
+          shakeRef.current = 10
+        }
       }
     }
 
@@ -197,7 +312,11 @@ export default function GameCanvas() {
     
     // Save context to apply camera transform
     ctx.save()
-    ctx.translate(-camera.x, 0) // Move everything left by camera position
+    
+    // Apply Camera + Shake
+    const shakeX = (Math.random() - 0.5) * shakeRef.current
+    const shakeY = (Math.random() - 0.5) * shakeRef.current
+    ctx.translate(-camera.x + shakeX, shakeY) 
 
     // Draw Background (Grass) - Draw big rectangle for whole world
     ctx.fillStyle = '#86efac' // green-300
@@ -207,20 +326,20 @@ export default function GameCanvas() {
     ctx.fillStyle = '#60a5fa' // blue-400
     ctx.fillRect(0, 0, 200, canvas.height)
     if (startImageRef.current) {
-        ctx.drawImage(startImageRef.current, 20, 80, 160, 160)
+        ctx.drawImage(startImageRef.current, 20, 160, 160, 160)
     }
     ctx.fillStyle = '#fff'
     ctx.font = 'bold 30px sans-serif'
-    ctx.fillText(gameConfig.startName.toUpperCase(), 20, 60)
+    ctx.fillText(gameConfig.startName.toUpperCase(), 20, 140)
 
     // Draw End Zone
     ctx.fillStyle = '#facc15' // yellow-400
     ctx.fillRect(WORLD_WIDTH - 200, 0, 200, canvas.height)
     if (finishImageRef.current) {
-        ctx.drawImage(finishImageRef.current, WORLD_WIDTH - 180, 80, 160, 160)
+        ctx.drawImage(finishImageRef.current, WORLD_WIDTH - 180, 160, 160, 160)
     }
     ctx.fillStyle = '#fff'
-    ctx.fillText(gameConfig.finishName.toUpperCase(), WORLD_WIDTH - 190, 60)
+    ctx.fillText(gameConfig.finishName.toUpperCase(), WORLD_WIDTH - 190, 140)
 
     // Draw Obstacles
     for (const obs of obstaclesRef.current) {
@@ -232,6 +351,11 @@ export default function GameCanvas() {
         ctx.fillStyle = '#ef4444'
         ctx.fillRect(obs.x, obs.y, obs.width, obs.height)
       }
+      
+      // Visual Collision Border (Lightly Visible)
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)'
+      ctx.lineWidth = 2
+      ctx.strokeRect(obs.x, obs.y, obs.width, obs.height)
     }
 
     // Draw Player
@@ -249,12 +373,24 @@ export default function GameCanvas() {
       ctx.fillRect(player.x, player.y, player.width, player.height)
     }
     
-    // Draw Player Border
+    // Draw Player Collision Border
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'
+    ctx.lineWidth = 2
+    ctx.strokeRect(player.x, player.y, player.width, player.height)
+    
+    // Draw Player Circle Border
     ctx.strokeStyle = '#fff'
     ctx.lineWidth = 4
     ctx.beginPath()
     ctx.arc(player.x + player.width/2, player.y + player.height/2, player.width/2, 0, Math.PI * 2)
     ctx.stroke()
+
+    // Draw Hit Effect
+    if (hitData.active) {
+      ctx.fillStyle = 'red'
+      ctx.font = 'bold 40px sans-serif'
+      ctx.fillText("OUCH!", hitData.x, hitData.y - 20)
+    }
 
     // Restore context (undo camera translate for fixed UI elements if we had any inside canvas)
     ctx.restore() 
@@ -311,15 +447,67 @@ export default function GameCanvas() {
         </div>
       )}
 
-      {/* Exit Button Overlay for Playing State */}
+      {/* Top HUD Bar */}
       {gameState === 'playing' && (
-        <div className="absolute bottom-4 left-4 z-10">
-          <Link 
-            href="/"
-            className="px-4 py-2 bg-red-500 text-white rounded-full font-bold shadow-md hover:bg-red-600 flex items-center gap-2"
-          >
-            <span>✖</span> Exit
-          </Link>
+        <div className="absolute top-0 left-0 w-full bg-white/90 backdrop-blur-md border-b-4 border-blue-200 p-4 flex justify-between items-center z-20 shadow-lg">
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-400 uppercase">Player</span>
+              <span className="text-xl font-bold text-blue-600">{playerName || 'Player'}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-400 uppercase">Level</span>
+              <span className={`text-xl font-bold capitalize ${
+                gameConfig.difficulty === 'easy' ? 'text-green-500' :
+                gameConfig.difficulty === 'medium' ? 'text-yellow-600' : 'text-red-500'
+              }`}>
+                {gameConfig.difficulty}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-8">
+            <div className="text-center">
+              <span className="block text-sm font-bold text-slate-400 uppercase">Time</span>
+              <span className="text-2xl font-bold text-slate-700 font-mono">
+                {Math.floor(timeElapsed / 60)}:{(timeElapsed % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
+            <div className="text-center">
+              <span className="block text-sm font-bold text-slate-400 uppercase">Score</span>
+              <span className="text-3xl font-bold text-amber-500 font-mono">{score}</span>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={togglePause}
+              className="px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-bold hover:bg-blue-200 transition-colors"
+            >
+              {isPaused ? '▶️ Resume' : '⏸️ Pause'}
+            </button>
+            <Link 
+              href="/"
+              className="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition-colors"
+            >
+              Exit
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Pause Overlay */}
+      {isPaused && (
+        <div className="absolute inset-0 z-30 bg-black/20 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl text-center">
+            <h2 className="text-4xl font-bold text-blue-500 mb-4">Game Paused</h2>
+            <button 
+              onClick={togglePause}
+              className="px-8 py-4 bg-green-500 text-white rounded-2xl font-bold text-xl shadow-lg hover:scale-105 transition-transform"
+            >
+              Resume Adventure
+            </button>
+          </div>
         </div>
       )}
 
