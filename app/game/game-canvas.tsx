@@ -25,6 +25,8 @@ export default function GameCanvas() {
   const FOOTER_HEIGHT = 20  // Small padding at bottom
   const SAFE_ZONE_TOP = HEADER_HEIGHT + 20
   const SAFE_ZONE_BOTTOM = FOOTER_HEIGHT + 20
+  const SAFE_ZONE_LEFT = 220 // Start Zone Width + padding
+  const SAFE_ZONE_RIGHT = 220 // End Zone Width + padding
   
   const [score, setScore] = useState(0)
   const [timeElapsed, setTimeElapsed] = useState(0)
@@ -312,8 +314,12 @@ export default function GameCanvas() {
           // Bounce off horizontal limits (local area patrol)
           // We can't easily check "local area" without storing initial pos, 
           // so let's just clamp to world bounds for now or let them roam
-          if (obs.x < 0 || obs.x + obs.width > WORLD_WIDTH) {
+          if (obs.x < SAFE_ZONE_LEFT || obs.x + obs.width > WORLD_WIDTH - SAFE_ZONE_RIGHT) {
             obs.vx = -(obs.vx || 0)
+            
+            // Clamp position
+            if (obs.x < SAFE_ZONE_LEFT) obs.x = SAFE_ZONE_LEFT
+            if (obs.x + obs.width > WORLD_WIDTH - SAFE_ZONE_RIGHT) obs.x = WORLD_WIDTH - SAFE_ZONE_RIGHT - obs.width
           }
         }
 
@@ -424,9 +430,22 @@ export default function GameCanvas() {
     animationFrameRef.current = requestAnimationFrame(gameLoop)
   }
 
+  // Handle resizing
+  useEffect(() => {
+    const handleResize = () => {
+      if (canvasRef.current) {
+        canvasRef.current.width = window.innerWidth
+        canvasRef.current.height = window.innerHeight
+      }
+    }
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   useEffect(() => {
     if (gameState === 'playing') {
-        // Resize canvas to window
+        // Initial resize
         if (canvasRef.current) {
             canvasRef.current.width = window.innerWidth
             canvasRef.current.height = window.innerHeight
@@ -478,15 +497,15 @@ export default function GameCanvas() {
 
       {/* Top HUD Bar */}
       {gameState === 'playing' && (
-        <div className="absolute top-0 left-0 w-full bg-white/90 backdrop-blur-md border-b-4 border-blue-200 p-4 flex justify-between items-center z-20 shadow-lg">
-          <div className="flex items-center gap-6">
+        <div className="absolute top-0 left-0 w-full bg-white/90 backdrop-blur-md border-b-4 border-blue-200 p-2 md:p-4 flex flex-wrap justify-between items-center z-20 shadow-lg gap-2">
+          <div className="flex items-center gap-2 md:gap-6">
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-slate-400 uppercase">Player</span>
-              <span className="text-xl font-bold text-blue-600">{playerName || 'Player'}</span>
+              <span className="text-[10px] md:text-sm font-bold text-slate-400 uppercase">Player</span>
+              <span className="text-sm md:text-xl font-bold text-blue-600 truncate max-w-[80px] md:max-w-none">{playerName || 'Player'}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-slate-400 uppercase">Level</span>
-              <span className={`text-xl font-bold capitalize ${
+              <span className="text-[10px] md:text-sm font-bold text-slate-400 uppercase">Level</span>
+              <span className={`text-sm md:text-xl font-bold capitalize ${
                 gameConfig.difficulty === 'easy' ? 'text-green-500' :
                 gameConfig.difficulty === 'medium' ? 'text-yellow-600' : 'text-red-500'
               }`}>
@@ -495,33 +514,76 @@ export default function GameCanvas() {
             </div>
           </div>
 
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 md:gap-8 order-last md:order-none w-full md:w-auto justify-center">
             <div className="text-center">
-              <span className="block text-sm font-bold text-slate-400 uppercase">Time</span>
-              <span className="text-2xl font-bold text-slate-700 font-mono">
+              <span className="block text-[10px] md:text-sm font-bold text-slate-400 uppercase">Time</span>
+              <span className="text-lg md:text-2xl font-bold text-slate-700 font-mono">
                 {Math.floor(timeElapsed / 60)}:{(timeElapsed % 60).toString().padStart(2, '0')}
               </span>
             </div>
             <div className="text-center">
-              <span className="block text-sm font-bold text-slate-400 uppercase">Score</span>
-              <span className="text-3xl font-bold text-amber-500 font-mono">{score}</span>
+              <span className="block text-[10px] md:text-sm font-bold text-slate-400 uppercase">Score</span>
+              <span className="text-xl md:text-3xl font-bold text-amber-500 font-mono">{score}</span>
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2 md:gap-3">
             <button
               onClick={togglePause}
-              className="px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-bold hover:bg-blue-200 transition-colors"
+              className="px-2 md:px-4 py-1 md:py-2 bg-blue-100 text-blue-600 rounded-xl font-bold hover:bg-blue-200 transition-colors text-sm md:text-base"
             >
-              {isPaused ? '▶️ Resume' : '⏸️ Pause'}
+              {isPaused ? '▶️' : '⏸️'}
             </button>
             <Link 
               href="/"
-              className="px-4 py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition-colors"
+              className="px-2 md:px-4 py-1 md:py-2 bg-red-100 text-red-600 rounded-xl font-bold hover:bg-red-200 transition-colors text-sm md:text-base"
             >
               Exit
             </Link>
           </div>
+        </div>
+      )}
+
+      {/* Mobile Controls (D-Pad) */}
+      {gameState === 'playing' && !isPaused && (
+        <div className="absolute bottom-6 left-6 z-40 grid grid-cols-3 gap-2 md:hidden opacity-80 touch-none select-none">
+            {/* Row 1 */}
+            <div /> 
+            <button 
+                className="w-14 h-14 bg-white/40 backdrop-blur-md rounded-full border-2 border-white/60 active:bg-blue-400/80 active:scale-95 transition-all flex items-center justify-center text-3xl shadow-lg touch-none select-none"
+                onTouchStart={(e) => { e.preventDefault(); keysRef.current['ArrowUp'] = true }}
+                onTouchEnd={(e) => { e.preventDefault(); keysRef.current['ArrowUp'] = false }}
+                onMouseDown={() => keysRef.current['ArrowUp'] = true}
+                onMouseUp={() => keysRef.current['ArrowUp'] = false}
+                onMouseLeave={() => keysRef.current['ArrowUp'] = false}
+            >⬆️</button>
+            <div /> 
+
+            {/* Row 2 */}
+            <button 
+                className="w-14 h-14 bg-white/40 backdrop-blur-md rounded-full border-2 border-white/60 active:bg-blue-400/80 active:scale-95 transition-all flex items-center justify-center text-3xl shadow-lg touch-none select-none"
+                onTouchStart={(e) => { e.preventDefault(); keysRef.current['ArrowLeft'] = true }}
+                onTouchEnd={(e) => { e.preventDefault(); keysRef.current['ArrowLeft'] = false }}
+                onMouseDown={() => keysRef.current['ArrowLeft'] = true}
+                onMouseUp={() => keysRef.current['ArrowLeft'] = false}
+                onMouseLeave={() => keysRef.current['ArrowLeft'] = false}
+            >⬅️</button>
+            <button 
+                className="w-14 h-14 bg-white/40 backdrop-blur-md rounded-full border-2 border-white/60 active:bg-blue-400/80 active:scale-95 transition-all flex items-center justify-center text-3xl shadow-lg touch-none select-none"
+                onTouchStart={(e) => { e.preventDefault(); keysRef.current['ArrowDown'] = true }}
+                onTouchEnd={(e) => { e.preventDefault(); keysRef.current['ArrowDown'] = false }}
+                onMouseDown={() => keysRef.current['ArrowDown'] = true}
+                onMouseUp={() => keysRef.current['ArrowDown'] = false}
+                onMouseLeave={() => keysRef.current['ArrowDown'] = false}
+            >⬇️</button>
+            <button 
+                className="w-14 h-14 bg-white/40 backdrop-blur-md rounded-full border-2 border-white/60 active:bg-blue-400/80 active:scale-95 transition-all flex items-center justify-center text-3xl shadow-lg touch-none select-none"
+                onTouchStart={(e) => { e.preventDefault(); keysRef.current['ArrowRight'] = true }}
+                onTouchEnd={(e) => { e.preventDefault(); keysRef.current['ArrowRight'] = false }}
+                onMouseDown={() => keysRef.current['ArrowRight'] = true}
+                onMouseUp={() => keysRef.current['ArrowRight'] = false}
+                onMouseLeave={() => keysRef.current['ArrowRight'] = false}
+            >➡️</button>
         </div>
       )}
 
